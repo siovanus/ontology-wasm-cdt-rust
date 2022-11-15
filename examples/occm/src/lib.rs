@@ -8,7 +8,7 @@ use ostd::contract::{eth, neo};
 use ostd::types::U256;
 use ostd::database::{get, put};
 
-const VERIFYHERDERANDEXECUTETX_ID: [u8; 4] = [0x70, 0xa0, 0x82, 0x31];
+const VERIFYHERDERANDEXECUTETX_ID: [u8; 4] = [0xa4, 0xe3, 0x20, 0xdb];
 
 const KEY_ADMIN: &[u8] = b"1";
 const KEY_CHAIN_ID: &[u8] = b"2";
