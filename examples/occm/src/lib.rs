@@ -3,7 +3,7 @@
 extern crate ontio_std as ostd;
 use ostd::abi::{Sink, Source, EventBuilder};
 use ostd::prelude::*;
-use ostd::runtime;
+use ostd::runtime::{address, check_witness, contract_migrate, input, ret};
 use ostd::contract::{eth, neo};
 use ostd::types::U256;
 use ostd::database::{get, put};
@@ -17,7 +17,7 @@ const FROM_CHAIN_TX: &[u8] = b"4";
 
 fn initialize(admin: &Address) -> bool {
     assert!(get_admin().is_zero(), "has inited");
-    assert!(runtime::check_witness(admin), "check admin signature failed");
+    assert!(check_witness(admin), "check admin signature failed");
     put(KEY_ADMIN, admin);
     true
 }
@@ -27,7 +27,7 @@ fn get_admin() -> Address {
 }
 
 fn set_chain_id(chain_id: u64) -> bool {
-    assert!(runtime::check_witness(&get_admin()), "check admin signature failed");
+    assert!(check_witness(&get_admin()), "check admin signature failed");
     put(KEY_CHAIN_ID, chain_id);
     true
 }
@@ -37,7 +37,7 @@ fn get_chain_id() -> u64 {
 }
 
 fn set_evm_ccm_contract(ccm: &Address) -> bool {
-    assert!(runtime::check_witness(&get_admin()), "check admin signature failed");
+    assert!(check_witness(&get_admin()), "check admin signature failed");
     put(EVM_CCM_CONTRACT, ccm);
     true
 }
@@ -47,7 +47,7 @@ fn get_evm_ccm_contract() -> Address {
 }
 
 fn verify_header_and_execute_tx(raw_header: &[u8], raw_seal: &[u8], accont_proof: &[u8], storage_proof: &[u8], raw_cross_tx: &[u8]) -> bool {
-    let this = runtime::address();
+    let this = address();
     let res = eth::evm_invoke(&this, &get_evm_ccm_contract(), gen_verify_header_and_execute_tx_data(raw_header, raw_seal, accont_proof, storage_proof, raw_cross_tx).as_slice());
     assert!(!res.is_empty(), "invalid evm invoke return");
     let mut source = Source::new(res.as_slice());
@@ -120,9 +120,18 @@ fn from_chain_tx_exist(tx_hash: &[u8]) -> bool {
     tx_hash == res.as_slice()
 }
 
+fn migrate(
+    code: &[u8], vm_type: u32, name: &str, version: &str, author: &str, email: &str, desc: &str,
+) -> bool {
+    assert!(check_witness(&get_admin()), "check admin signature failed");
+    let new_addr = contract_migrate(code, vm_type, name, version, author, email, desc);
+    assert!(!new_addr.is_zero());
+    true
+}
+
 #[no_mangle]
 pub fn invoke() {
-    let input = runtime::input();
+    let input = input();
     let mut source = Source::new(&input);
     let action = source.read().unwrap();
     let mut sink = Sink::new(12);
@@ -159,7 +168,12 @@ pub fn invoke() {
                 raw_cross_tx,
             ))
         }
+        "migrate" => {
+            let (code, vm_type, name, version, author, email, desc) = source.read().unwrap();
+            let vm_type: U128 = vm_type;
+            sink.write(migrate(code, vm_type.raw() as u32, name, version, author, email, desc));
+        }
         _ => panic!("unsupported action!"),
     }
-    runtime::ret(sink.bytes())
+    ret(sink.bytes())
 }
