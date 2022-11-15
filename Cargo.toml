@@ -16,7 +16,8 @@ members = [
     "examples/call_native",
     "examples/oracle",
     "examples/gov",
-    "examples/bridge"
+    "examples/bridge",
+    "examples/occm"
 ]
 
 [profile.release]
