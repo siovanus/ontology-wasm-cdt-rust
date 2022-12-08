@@ -165,7 +165,7 @@ fn cross_chain(to_chain_id: U128, to_proxy_hash: &[u8], method: &[u8], args: &[u
     U256::from(param_tx_hash.len() as u128).to_be_bytes().as_ref(), param_tx_hash.as_ref(), 
     U256::from(cross_chain_id.as_bytes().len() as u128).to_be_bytes().as_ref(), cross_chain_id.as_bytes(),  
     U256::from(caller().as_bytes().len() as u128).to_be_bytes().as_ref(), format_bytes(caller().as_bytes()).as_ref(), 
-    U256::from(to_proxy_hash.len() as u128).to_be_bytes().as_ref(), to_proxy_hash, 
+    U256::from(to_proxy_hash.len() as u128).to_be_bytes().as_ref(), format_bytes(to_proxy_hash).as_ref(), 
     U256::from(method.len() as u128).to_be_bytes().as_ref(), format_bytes(method).as_ref(), 
     U256::from(args.len() as u128).to_be_bytes().as_ref(), format_bytes(args).as_ref(), 
     ].concat();
