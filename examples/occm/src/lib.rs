@@ -67,7 +67,7 @@ fn verify_header_and_execute_tx(raw_header: &[u8], raw_seal: &[u8], accont_proof
     let args = source.read_bytes().unwrap();
 
     // check & put tx exection information
-    assert!(!from_chain_tx_exist(cross_chain_id), "the transaction has been executed!");
+    assert!(from_chain_tx_exist(cross_chain_id), "the transaction has been executed!");
     put_from_chain_tx(cross_chain_id);
     assert!(to_chain_id == get_chain_id(), "This Tx is not aiming at this network!");
 
