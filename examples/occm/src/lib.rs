@@ -1,6 +1,7 @@
 #![cfg_attr(not(feature = "mock"), no_std)]
 #![feature(proc_macro_hygiene)]
 extern crate ontio_std as ostd;
+
 use ostd::abi::{Sink, Source, EventBuilder};
 use ostd::prelude::*;
 use ostd::runtime::{address, check_witness, contract_migrate, input, ret, sha256, caller, entry_address};
@@ -55,19 +56,19 @@ fn verify_header_and_execute_tx(raw_header: &[u8], raw_seal: &[u8], accont_proof
     let mut source = Source::new(res.as_slice());
     // parse response
     let zion_tx_hash = source.read_bytes().unwrap();
-    let from_chain_id: u64 = source.read().unwrap();
+    let from_chain_id: u64 = source.read_u64().unwrap();
     let from_chain_id = U128::new(from_chain_id as u128);
     let source_tx_hash = source.read_bytes().unwrap();
     let cross_chain_id = source.read_bytes().unwrap();
     let from_contract = source.read_bytes().unwrap();
-    let to_chain_id: u64 = source.read().unwrap();
+    let to_chain_id: u64 = source.read_u64().unwrap();
     let to_chain_id = U128::new(to_chain_id as u128);
     let to_contract = source.read_bytes().unwrap();
     let method = source.read_bytes().unwrap();
     let args = source.read_bytes().unwrap();
 
     // check & put tx exection information
-    assert!(from_chain_tx_exist(cross_chain_id), "the transaction has been executed!");
+    assert!(!from_chain_tx_exist(cross_chain_id), "the transaction has been executed!");
     put_from_chain_tx(cross_chain_id);
     assert!(to_chain_id == get_chain_id(), "This Tx is not aiming at this network!");
 
