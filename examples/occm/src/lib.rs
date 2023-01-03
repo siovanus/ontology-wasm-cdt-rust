@@ -2,10 +2,10 @@
 #![feature(proc_macro_hygiene)]
 extern crate ontio_std as ostd;
 
-use ostd::abi::{Sink, Source, EventBuilder};
+use ostd::abi::{Sink, Source, EventBuilder, VmValueBuilder};
 use ostd::prelude::*;
-use ostd::runtime::{address, check_witness, contract_migrate, input, ret, sha256, caller, entry_address};
-use ostd::contract::{eth, neo};
+use ostd::runtime::{address, check_witness, contract_migrate, input, ret, sha256, caller, entry_address, call_contract};
+use ostd::contract::eth;
 use ostd::types::U256;
 use ostd::database::{get, put};
 
@@ -53,8 +53,13 @@ fn verify_header_and_execute_tx(raw_header: &[u8], raw_seal: &[u8], accont_proof
     let this = address();
     let res = eth::evm_invoke(&this, &get_evm_ccm_contract(), gen_verify_header_and_execute_tx_data(raw_header, raw_seal, accont_proof, storage_proof, raw_cross_tx).as_slice());
     assert!(!res.is_empty(), "invalid evm invoke return");
-    let mut source = Source::new(res.as_slice());
-    // parse response
+
+    // abi decode as byte, 32-length offset and 32-length length, the raw bytes is fulfill with zero right side, that's ok for zero copy source
+    let t = res.as_slice();
+    let t = &t[64..];
+
+      // parse response
+    let mut source = Source::new(t);
     let zion_tx_hash = source.read_bytes().unwrap();
     let from_chain_id: u64 = source.read_u64().unwrap();
     let from_chain_id = U128::new(from_chain_id as u128);
@@ -77,7 +82,14 @@ fn verify_header_and_execute_tx(raw_header: &[u8], raw_seal: &[u8], accont_proof
     let mut to_contract_addr = [0; 20];
     to_contract_addr[..].copy_from_slice(to_contract[..].as_ref());
     let lock_proxy_contract_addr = &Address::new(to_contract_addr);
-    neo::call_contract(&lock_proxy_contract_addr, (method, args, from_contract, from_chain_id));
+    let mut builder = VmValueBuilder::new();
+    builder.bytearray(method);
+    let mut nested = builder.list();
+    nested.bytearray(args);
+    nested.bytearray(from_contract);
+    nested.number(from_chain_id);
+    nested.finish();
+    call_contract(&lock_proxy_contract_addr, &builder.bytes());
 
     // notify event
     EventBuilder::new()
